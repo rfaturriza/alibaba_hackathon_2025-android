@@ -1,5 +1,6 @@
 package com.kajianhub.alibabahackathon2025.service.api
 
+import android.util.Log
 import androidx.lifecycle.LifecycleCoroutineScope
 import com.kajianhub.alibabahackathon2025.service.model.FoodItem
 import kotlinx.coroutines.Dispatchers
@@ -20,8 +21,11 @@ object FoodFetcher {
                 val items = withContext(Dispatchers.IO) {
                     RetrofitClient.api.getProducts()
                 }
-                _foodItems.value = items
+                Log.d("fetchFoodItems", ": you are in this position 1 $items")
+
+//                _foodItems.value = items
             } catch (e: Exception) {
+                Log.d("fetchFoodItems", ": you are in this position 2 ${e.localizedMessage}")
                 e.printStackTrace()
             }
         }

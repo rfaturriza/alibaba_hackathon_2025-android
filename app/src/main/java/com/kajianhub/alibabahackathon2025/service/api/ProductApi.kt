@@ -1,5 +1,6 @@
 package com.kajianhub.alibabahackathon2025.service.api
 
+import com.kajianhub.alibabahackathon2025.service.model.ApiResponse
 import com.kajianhub.alibabahackathon2025.service.model.FoodItem
 import com.kajianhub.alibabahackathon2025.service.model.FoodItemResponse
 import com.kajianhub.alibabahackathon2025.service.model.OrderHistoryResponse
@@ -14,8 +15,8 @@ import retrofit2.http.Part
 import retrofit2.http.Query
 
 interface ProductApi {
-    @GET("/products")
-    suspend fun getProducts(): List<FoodItem>
+    @GET("products")
+    suspend fun getProducts(): ApiResponse
 
     @Multipart
     @POST("/products")

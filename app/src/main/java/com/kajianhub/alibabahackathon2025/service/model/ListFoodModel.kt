@@ -2,9 +2,16 @@ package com.kajianhub.alibabahackathon2025.service.model
 
 import kotlinx.serialization.Serializable
 
+
+@Serializable
+data class ApiResponse(
+    val message: String,
+    val data: List<FoodItem>
+)
+
 @Serializable
 data class FoodItem(
-    val id: String,
+    val id: String,                 // Also present in JSON (can be same or different)
     val images_url: List<String>,
     val title: String,
     val description: String,
@@ -12,7 +19,7 @@ data class FoodItem(
     val nutrition: NutritionInfo,
     val merchant_id: String?,
     val createdAt: String,
-    val updatedAt: String
+    val updatedAt: String,
 )
 
 @Serializable
@@ -38,6 +45,7 @@ data class FoodItemResponse(
 
 @Serializable
 data class OrderRequest(
+    val product_id: String,
     val product_id: String,
     val user_id: String
 )

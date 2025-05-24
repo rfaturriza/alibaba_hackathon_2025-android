@@ -10,7 +10,7 @@ object RetrofitClient {
 
     val api: ProductApi by lazy {
         Retrofit.Builder()
-            .baseUrl("http://your-domain.com/api") // Replace with actual domain
+            .baseUrl("http://147.139.169.55/api/") // Replace with actual domain
             .client(client)
             .addConverterFactory(MoshiConverterFactory.create())
             .build()
