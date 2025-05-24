@@ -30,7 +30,7 @@ interface ProductApi {
     ): FoodItemResponse
 
 
-    @POST("/order")
+    @POST("order")
     suspend fun placeOrder(@Body request: OrderRequest): retrofit2.Response<Any>
 
     @GET("/histories")

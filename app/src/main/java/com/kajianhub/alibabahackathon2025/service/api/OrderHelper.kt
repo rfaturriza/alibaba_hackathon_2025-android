@@ -11,6 +11,7 @@ import java.io.IOException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromJsonElement
 
+
 object OrderHelper {
 
     sealed class OrderResult {
@@ -21,24 +22,26 @@ object OrderHelper {
 
     suspend fun placeOrder(
         productId: String,
-        userId: String
+        userId: String,
+        forceOrder: Boolean = false
     ): OrderResult = withContext(Dispatchers.IO) {
         try {
             val api = RetrofitClient.api
-            val response = api.placeOrder(OrderRequest(productId, userId))
+            val response = api.placeOrder(
+                OrderRequest(productId, userId, if (forceOrder) true else null)
+            )
 
             when (response.code()) {
-                200 -> {
+                200, 201 -> {
                     val body = response.body() ?: return@withContext OrderResult.Error(IOException("Empty response"))
 
-                    // Check if it's a success or alert
-                    val json = Json.Default.decodeFromJsonElement(JsonObject.serializer(), body as JsonObject)
+                    val json = Json.decodeFromJsonElement<JsonObject>(body as JsonObject)
 
                     if (json.containsKey("alert")) {
-                        val alertResponse = Json.Default.decodeFromJsonElement<OrderErrorResponse>(body)
+                        val alertResponse = Json.decodeFromJsonElement<OrderErrorResponse>(body)
                         OrderResult.Alert(alertResponse)
                     } else {
-                        val successResponse = Json.Default.decodeFromJsonElement<OrderSuccessResponse>(body)
+                        val successResponse = Json.decodeFromJsonElement<OrderSuccessResponse>(body)
                         OrderResult.Success(successResponse)
                     }
                 }

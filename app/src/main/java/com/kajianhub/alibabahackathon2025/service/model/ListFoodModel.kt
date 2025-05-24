@@ -46,14 +46,23 @@ data class FoodItemResponse(
 @Serializable
 data class OrderRequest(
     val product_id: String,
-    val product_id: String,
-    val user_id: String
+    val user_id: String,
+    val force_order: Boolean? = null // Optional, default not sent
 )
 
 @Serializable
 data class OrderSuccessResponse(
     val message: String,
     val data: OrderData
+)
+
+@Serializable
+data class OrderData(
+    val order_id: String,
+    val product: FoodItem,
+    val user_id: String,
+    val createdAt: String,
+    val updatedAt: String
 )
 
 @Serializable
@@ -70,15 +79,7 @@ data class NutrientExceeded(
     val limit: Int
 )
 
-@Serializable
-data class OrderData(
-    val product_id: String,
-    val order_id: String,
-    val product: FoodItem,
-    val user_id: String,
-    val createdAt: String,
-    val updatedAt: String
-)
+
 
 
 @Serializable
