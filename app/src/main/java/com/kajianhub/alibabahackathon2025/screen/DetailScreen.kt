@@ -32,8 +32,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -44,46 +46,74 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.LifecycleCoroutineScope
 import com.kajianhub.alibabahackathon2025.FoodDetail
+import com.kajianhub.alibabahackathon2025.service.api.FoodFetcher
+import com.kajianhub.alibabahackathon2025.service.api.OrderHelper
+import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
 
 @Composable
-fun DetailFoodScreen(foodId: String, onClick: (Boolean) -> Unit){
-    val sampleData = FoodDetail(
-        deliveryAddress = "Jalan Setiabudi Timur",
-        itemTitle = "Spicy Chicken Burger",
-        itemDescription = "With lettuce, tomato, and special sauce",
-        originalPrice = "50000",
-        discountedPrice = "40000",
-        paymentMethodIcon = Icons.Default.AccountBalanceWallet,
-        paymentMethodName = "GoPay",
-        paymentAmount = "52.000"
-    )
+fun DetailFoodScreen(lifecycleScope: LifecycleCoroutineScope, foodId: String, onClick: (Boolean) -> Unit){
+    // Find the matching food item by ID
+    val foodItems by FoodFetcher.foodItems.collectAsState()
+    val selectedItem = remember(foodId, foodItems) {
+        foodItems.find { it.id == foodId }
+    }
+
+    if (selectedItem == null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Item not found")
+        }
+        return
+    }
+
+    // Convert FoodItem to FoodDetail for your existing UI
+    val foodDetail = remember(selectedItem) {
+        FoodDetail(
+            deliveryAddress = "Jalan Setiabudi Timur", // Replace with user-selected address later
+            itemTitle = selectedItem.title,
+            itemDescription = selectedItem.description,
+            originalPrice = selectedItem.price.toString(),
+            discountedPrice = "", // or dynamic value
+            paymentMethodIcon = Icons.Default.AccountBalanceWallet,
+            paymentMethodName = "GoPay",
+            paymentAmount = "52.000"
+        )
+    }
 
     FoodDetailItem(
-        foodDetail = sampleData,
-        onLocationChangeClick = { },
-        onAddAddressDetailsClick = { },
-        onNotesClick = { },
-        onEditClick = { },
-        onQuantityChange = { },
-        onPurchaseClick = {
-            onClick(false)
+        lifecycleScope = lifecycleScope,
+        foodDetail = foodDetail,
+        foodId = selectedItem.id,
+        onLocationChangeClick = {},
+        onAddAddressDetailsClick = {},
+        onNotesClick = {},
+        onEditClick = {},
+        onQuantityChange = {},
+        onPurchaseClick = {isTrue ->
+            onClick(isTrue)
         }
     )
 }
 
 @Composable
 fun FoodDetailItem(
+    lifecycleScope: LifecycleCoroutineScope,
     foodDetail: FoodDetail,
     onLocationChangeClick: () -> Unit = {},
     onAddAddressDetailsClick: () -> Unit = {},
     onNotesClick: () -> Unit = {},
     onEditClick: () -> Unit = {},
     onQuantityChange: (Int) -> Unit = {},
-    onPurchaseClick: () -> Unit = {}
+    onPurchaseClick: (Boolean) -> Unit = {},
+    foodId: String
 ) {
     var quantity by remember { mutableIntStateOf(foodDetail.quantity) }
-
+    var resultMessage by remember { mutableStateOf("") }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -258,7 +288,29 @@ fun FoodDetailItem(
         }
 
         Button(
-            onClick = onPurchaseClick,
+            onClick = {
+                lifecycleScope.launch {
+                    val result = OrderHelper.placeOrder(foodId, foodId)
+
+                    when (result) {
+                        is OrderHelper.OrderResult.Success -> {
+                            onPurchaseClick(true)
+                            resultMessage = result.response.message
+                            // Navigate to confirmation screen
+                        }
+
+                        is OrderHelper.OrderResult.Alert -> {
+                            resultMessage = result.response.message
+                            // Show warning dialog
+                        }
+
+                        is OrderHelper.OrderResult.Error -> {
+                            onPurchaseClick(false)
+                            resultMessage = "Error: ${result.exception.message}"
+                        }
+                    }
+                }
+                },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
@@ -266,5 +318,13 @@ fun FoodDetailItem(
         ) {
             Text(text = "Purchase and deliver now", color = Color.White)
         }
+    }
+}
+
+
+fun prepareImageFiles(files: List<File>): List<MultipartBody.Part> {
+    return files.map { file ->
+        val requestFile = file.asRequestBody("image/*".toMediaType())
+        MultipartBody.Part.createFormData("images", file.name, requestFile)
     }
 }

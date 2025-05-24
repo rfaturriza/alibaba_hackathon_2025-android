@@ -46,6 +46,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,6 +60,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -69,6 +72,7 @@ import coil.compose.rememberAsyncImagePainter
 import com.kajianhub.alibabahackathon2025.screen.DetailFoodScreen
 import com.kajianhub.alibabahackathon2025.screen.FoodDetailItem
 import com.kajianhub.alibabahackathon2025.screen.FoodItemCard
+import com.kajianhub.alibabahackathon2025.screen.HistoryScreen
 import com.kajianhub.alibabahackathon2025.screen.ListFoodScreen
 import com.kajianhub.alibabahackathon2025.screen.OrderConfirmationScreen
 import com.kajianhub.alibabahackathon2025.screen.Screen
@@ -86,9 +90,13 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MyApp(){
     val navController  = rememberNavController()
+    val lifecycleScope = LocalLifecycleOwner.current.lifecycleScope
+
     NavHost(navController, startDestination = Screen.ListFoodScreen.route){
         composable(Screen.ListFoodScreen.route) {
-            ListFoodScreen(){ foodId ->
+            ListFoodScreen(lifecycleScope = lifecycleScope, onHistoryClick = { id ->
+                navController.navigate("history/$id")
+            }){ foodId ->
                 navController.navigate(Screen.DetailFoodScreen.createRoute(foodId))
             }
         }
@@ -98,7 +106,7 @@ fun MyApp(){
             arguments = listOf(navArgument("foodId") { type = NavType.StringType })
         ) { backStackEntry ->
             val foodId = backStackEntry.arguments?.getString("foodId") ?: ""
-            DetailFoodScreen(foodId = foodId) { isSuccess ->
+            DetailFoodScreen(lifecycleScope = lifecycleScope, foodId = foodId) { isSuccess ->
                 if (isSuccess)  navController.navigate("order_confirmation_success") else navController.navigate("order_confirmation_calorie")
             }
 
@@ -114,6 +122,11 @@ fun MyApp(){
             OrderConfirmationScreen(popupType = "calorie", onDismiss = {
                 navController.navigate(Screen.ListFoodScreen.route)
             })
+        }
+
+        composable(route = "history/{userId}") { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+            HistoryScreen(lifecycleScope = lifecycleScope, userId = userId)
         }
     }
 }
@@ -131,32 +144,6 @@ data class FoodItemData(
     val imageUrl: String
 )
 
-
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewFoodDetailScreen() {
-    val sampleData = FoodDetail(
-        deliveryAddress = "Jalan Setiabudi Timur",
-        itemTitle = "Spicy Chicken Burger",
-        itemDescription = "With lettuce, tomato, and special sauce",
-        originalPrice = "50000",
-        discountedPrice = "40000",
-        paymentMethodIcon = Icons.Default.AccountBalanceWallet,
-        paymentMethodName = "GoPay",
-        paymentAmount = "52.000"
-    )
-
-    FoodDetailItem(
-        foodDetail = sampleData,
-        onLocationChangeClick = { },
-        onAddAddressDetailsClick = { },
-        onNotesClick = { },
-        onEditClick = { },
-        onQuantityChange = { },
-        onPurchaseClick = { }
-    )
-}
 
 
 data class FoodDetail(
