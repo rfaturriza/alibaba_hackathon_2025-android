@@ -53,7 +53,7 @@ data class OrderRequest(
 @Serializable
 data class OrderSuccessResponse(
     val message: String,
-    val data: OrderData
+    val data: OrderData? = null // Nullable to handle cases where data might not be present
 )
 
 @Serializable
@@ -69,7 +69,7 @@ data class OrderData(
 data class OrderErrorResponse(
     val alert: Boolean,
     val message: String,
-    val exceeded: List<NutrientExceeded>
+    val exceeded: List<NutrientExceeded>? = null
 )
 
 @Serializable
@@ -78,8 +78,6 @@ data class NutrientExceeded(
     val total: Int,
     val limit: Int
 )
-
-
 
 
 @Serializable

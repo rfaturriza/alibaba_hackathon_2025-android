@@ -1,15 +1,20 @@
 package com.kajianhub.alibabahackathon2025.service.api
 
+import com.kajianhub.alibabahackathon2025.service.model.OrderData
 import com.kajianhub.alibabahackathon2025.service.model.OrderErrorResponse
 import com.kajianhub.alibabahackathon2025.service.model.OrderRequest
 import com.kajianhub.alibabahackathon2025.service.model.OrderSuccessResponse
+import com.squareup.moshi.Moshi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import retrofit2.HttpException
 import java.io.IOException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 
 object OrderHelper {
@@ -33,15 +38,29 @@ object OrderHelper {
 
             when (response.code()) {
                 200, 201 -> {
-                    val body = response.body() ?: return@withContext OrderResult.Error(IOException("Empty response"))
+                    val body = response.body()
+                        ?: return@withContext OrderResult.Error(IOException("Empty response"))
 
-                    val json = Json.decodeFromJsonElement<JsonObject>(body as JsonObject)
+                    // Convert the response body (Map or Any) to JSON string using Moshi
+                    val moshi = Moshi.Builder().build()
+                    val adapter = moshi.adapter(Any::class.java)
+                    val jsonString = adapter.toJson(body)
+                    val jsonElement = Json.parseToJsonElement(jsonString)
+                    val json = jsonElement.jsonObject
 
-                    if (json.containsKey("alert")) {
-                        val alertResponse = Json.decodeFromJsonElement<OrderErrorResponse>(body)
+                    if (json.containsKey("alert") && json["alert"]?.jsonPrimitive?.booleanOrNull == true) {
+                        // Only decode the relevant part for alert
+                        val alertResponse = OrderErrorResponse(
+                            message = json["message"]?.jsonPrimitive?.content ?: "Unknown error",
+                            alert = json["alert"]?.jsonPrimitive?.booleanOrNull ?: false,
+                        )
                         OrderResult.Alert(alertResponse)
                     } else {
-                        val successResponse = Json.decodeFromJsonElement<OrderSuccessResponse>(body)
+                        // Only decode the relevant part for success
+                        val successResponse = OrderSuccessResponse(
+                            message = json["message"]?.jsonPrimitive?.content ?: "Order placed successfully",
+
+                        )
                         OrderResult.Success(successResponse)
                     }
                 }
@@ -57,3 +76,4 @@ object OrderHelper {
         }
     }
 }
+

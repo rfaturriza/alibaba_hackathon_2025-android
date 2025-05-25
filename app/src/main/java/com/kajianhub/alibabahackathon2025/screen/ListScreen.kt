@@ -57,6 +57,7 @@ fun ListFoodScreen(lifecycleScope: LifecycleCoroutineScope,
 
 @Composable
 fun FoodItemCard(
+    foodId: String,
     foodName: String,
     foodDetail: String,
     originalPrice: String,
@@ -72,7 +73,7 @@ fun FoodItemCard(
             .fillMaxWidth()
             .padding(8.dp)
             .clickable {
-                onFoodClick(foodName)
+                onFoodClick(foodId)
             }
     ) {
         Row(
@@ -202,10 +203,8 @@ fun FoodItemListScreen(lifecycleScope: LifecycleCoroutineScope,
                     originalPrice = item.price.toString(),
                     discountedPrice = "", // or dynamic value
                     imageUrl = item.images_url.firstOrNull() ?: "",
-                    onFoodClick = { name ->
-                        onFoodClick(name)
-                        // Handle click
-                    }
+                    onFoodClick = onFoodClick,
+                    foodId = item.id,
                 )
             }
         }

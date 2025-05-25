@@ -23,7 +23,7 @@ object FoodFetcher {
                 }
                 Log.d("fetchFoodItems", ": you are in this position 1 $items")
 
-//                _foodItems.value = items
+                _foodItems.value = items.data
             } catch (e: Exception) {
                 Log.d("fetchFoodItems", ": you are in this position 2 ${e.localizedMessage}")
                 e.printStackTrace()

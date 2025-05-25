@@ -1,5 +1,6 @@
 package com.kajianhub.alibabahackathon2025.screen
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Note
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -31,6 +33,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -41,11 +44,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.LifecycleCoroutineScope
 import com.kajianhub.alibabahackathon2025.FoodDetail
 import com.kajianhub.alibabahackathon2025.service.api.FoodFetcher
@@ -55,14 +61,24 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
+import com.kajianhub.alibabahackathon2025.SimpleAlertDialog
 
 @Composable
-fun DetailFoodScreen(lifecycleScope: LifecycleCoroutineScope, foodId: String, onClick: (Boolean) -> Unit){
+fun DetailFoodScreen(
+    lifecycleScope: LifecycleCoroutineScope,
+    foodId: String,
+    onBackHome: () -> Unit,
+) {
     // Find the matching food item by ID
     val foodItems by FoodFetcher.foodItems.collectAsState()
     val selectedItem = remember(foodId, foodItems) {
         foodItems.find { it.id == foodId }
     }
+    // state dialog
+    var message by remember { mutableStateOf("") }
+    var isSuccessDialogShowing by remember { mutableStateOf(false) }
+    var isAlertDialogShowing by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
 
     if (selectedItem == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -85,6 +101,72 @@ fun DetailFoodScreen(lifecycleScope: LifecycleCoroutineScope, foodId: String, on
         )
     }
 
+
+    fun onPurchaseClick(
+        forceOrder: Boolean = false
+    ) {
+        isLoading = true
+        lifecycleScope.launch {
+            try {
+                val result = OrderHelper.placeOrder(foodId, "test_user_id", forceOrder)
+                when (result) {
+                    is OrderHelper.OrderResult.Success -> {
+                        message = result.response.message
+                        isSuccessDialogShowing = true
+                    }
+                    is OrderHelper.OrderResult.Alert -> {
+                        message = result.response.message
+                        isAlertDialogShowing = true
+                    }
+                    is OrderHelper.OrderResult.Error -> {
+                        message = "Error: ${result.exception.message}"
+                    }
+                }
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+    if (isSuccessDialogShowing) {
+        SimpleAlertDialog(
+            dialogTitle = "Success",
+            dialogSubTitle = "Your order for ${foodDetail.itemTitle} has been placed successfully.",
+            onDismissRequest = {
+                isSuccessDialogShowing = false
+                onBackHome()
+            },
+            onConfirmation = {
+                isSuccessDialogShowing = false
+                onBackHome()
+            }
+        )
+    }
+    if (isAlertDialogShowing) {
+        SimpleAlertDialog(
+            dialogTitle = "Warning",
+            dialogSubTitle = message,
+            onDismissRequest = {
+                isAlertDialogShowing = false
+                onBackHome()
+            },
+            onConfirmation = {
+                isAlertDialogShowing = false
+                onPurchaseClick(forceOrder = true)
+            }
+        )
+    }
+
+    if (isLoading) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.3f)),
+            contentAlignment = Alignment.Center
+        ) {
+            androidx.compose.material3.CircularProgressIndicator()
+        }
+    }
+
     FoodDetailItem(
         lifecycleScope = lifecycleScope,
         foodDetail = foodDetail,
@@ -94,9 +176,9 @@ fun DetailFoodScreen(lifecycleScope: LifecycleCoroutineScope, foodId: String, on
         onNotesClick = {},
         onEditClick = {},
         onQuantityChange = {},
-        onPurchaseClick = {isTrue ->
-            onClick(isTrue)
-        }
+        onPurchaseClick = {
+            onPurchaseClick()
+        },
     )
 }
 
@@ -109,8 +191,10 @@ fun FoodDetailItem(
     onNotesClick: () -> Unit = {},
     onEditClick: () -> Unit = {},
     onQuantityChange: (Int) -> Unit = {},
-    onPurchaseClick: (Boolean) -> Unit = {},
-    foodId: String
+    onPurchaseClick: () -> Unit = {},
+    foodId: String,
+    onSuccess: (String) -> Unit = {},
+    onAlert: (String) -> Unit = {},
 ) {
     var quantity by remember { mutableIntStateOf(foodDetail.quantity) }
     var resultMessage by remember { mutableStateOf("") }
@@ -289,28 +373,8 @@ fun FoodDetailItem(
 
         Button(
             onClick = {
-                lifecycleScope.launch {
-                    val result = OrderHelper.placeOrder(foodId, foodId)
-
-                    when (result) {
-                        is OrderHelper.OrderResult.Success -> {
-                            onPurchaseClick(true)
-                            resultMessage = result.response.message
-                            // Navigate to confirmation screen
-                        }
-
-                        is OrderHelper.OrderResult.Alert -> {
-                            resultMessage = result.response.message
-                            // Show warning dialog
-                        }
-
-                        is OrderHelper.OrderResult.Error -> {
-                            onPurchaseClick(false)
-                            resultMessage = "Error: ${result.exception.message}"
-                        }
-                    }
-                }
-                },
+                onPurchaseClick()
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
@@ -328,3 +392,4 @@ fun prepareImageFiles(files: List<File>): List<MultipartBody.Part> {
         MultipartBody.Part.createFormData("images", file.name, requestFile)
     }
 }
+
