@@ -17,6 +17,7 @@ import com.kajianhub.alibabahackathon2025.screen.HistoryScreen
 import com.kajianhub.alibabahackathon2025.screen.ListFoodScreen
 import com.kajianhub.alibabahackathon2025.screen.OrderConfirmationScreen
 import com.kajianhub.alibabahackathon2025.screen.Screen
+import com.kajianhub.alibabahackathon2025.service.model.FoodItem
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -84,6 +85,7 @@ data class FoodItemData(
 
 
 data class FoodDetail(
+    val foodItem: FoodItem,
     val deliveryAddress: String,
     val itemTitle: String,
     val itemDescription: String,

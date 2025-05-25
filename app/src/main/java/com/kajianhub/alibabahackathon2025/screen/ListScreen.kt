@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -28,6 +29,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +44,7 @@ import androidx.lifecycle.LifecycleCoroutineScope
 import coil.compose.rememberAsyncImagePainter
 import com.kajianhub.alibabahackathon2025.FoodItemData
 import com.kajianhub.alibabahackathon2025.service.api.FoodFetcher
+import kotlinx.coroutines.launch
 
 @Composable
 fun ListFoodScreen(lifecycleScope: LifecycleCoroutineScope,
@@ -157,12 +162,19 @@ fun FoodItemCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FoodItemListScreen(lifecycleScope: LifecycleCoroutineScope,
                        onHistoryClick: (String) -> Unit,
                        onFoodClick: (String) -> Unit) {
 
     val foodItems by FoodFetcher.foodItems.collectAsState()
+    val isRefreshing = remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Track loading state based on FoodFetcher
+    val loading by FoodFetcher.isLoading.collectAsState(initial = false)
+    isRefreshing.value = loading
 
     LaunchedEffect(Unit) {
         FoodFetcher.fetchFoodItems(lifecycleScope)
@@ -170,113 +182,51 @@ fun FoodItemListScreen(lifecycleScope: LifecycleCoroutineScope,
 
     Log.d("FoodItemListScreen", ": tracing your data $foodItems")
 
-    if (foodItems.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Loading...")
-        }
-    } else {
-        LazyColumn {
-
-            item {
-                Box(){
-                    IconButton(
-                        onClick = {
-                            onHistoryClick("dummyfisrt")
-                        },
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(16.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.History,
-                            contentDescription = "Order History"
-                        )
+    PullToRefreshBox(
+        isRefreshing = isRefreshing.value,
+        onRefresh = {
+            coroutineScope.launch {
+                FoodFetcher.fetchFoodItems(lifecycleScope)
+            }
+        },
+    ) {
+        if (foodItems.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Loading...")
+            }
+        } else {
+            LazyColumn {
+                item {
+                    Box(){
+                        IconButton(
+                            onClick = {
+                                onHistoryClick("dummyfisrt")
+                            },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(16.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = "Order History"
+                            )
+                        }
                     }
                 }
-
-            }
-            items(foodItems.size) { index ->
-                val item = foodItems[index]
-                FoodItemCard(
-                    foodName = item.title,
-                    foodDetail = item.description,
-                    originalPrice = item.price.toString(),
-                    discountedPrice = "", // or dynamic value
-                    imageUrl = item.images_url.firstOrNull() ?: "",
-                    onFoodClick = onFoodClick,
-                    foodId = item.id,
-                )
+                items(foodItems.size) { index ->
+                    val item = foodItems[index]
+                    FoodItemCard(
+                        foodName = item.title,
+                        foodDetail = item.description,
+                        originalPrice = item.price.toString(),
+                        discountedPrice = "", // or dynamic value
+                        imageUrl = item.images_url.firstOrNull() ?: "",
+                        onFoodClick = onFoodClick,
+                        foodId = item.id,
+                    )
+                }
             }
         }
     }
-//    val items = listOf(
-//        FoodItemData(
-//            name = "Spicy Chicken Burger",
-//            detail = "With lettuce, tomato, and special sauce",
-//            originalPrice = "50000",
-//            discountedPrice = "40000",
-//            imageUrl = "https://i.pinimg.com/736x/e1/c2/4c/e1c24cf335a87ccbec1ca421f80f015d.jpg "
-//        ),
-//        FoodItemData(
-//            name = "Cheeseburger",
-//            detail = "Classic cheeseburger with grilled beef",
-//            originalPrice = "35000",
-//            discountedPrice = "",
-//            imageUrl = "https://i.pinimg.com/736x/e1/c2/4c/e1c24cf335a87ccbec1ca421f80f015d.jpg "
-//        ),
-//        FoodItemData(
-//            name = "Double Bacon Burger",
-//            detail = "Double meat, double bacon",
-//            originalPrice = "60000",
-//            discountedPrice = "50000",
-//            imageUrl = "https://i.pinimg.com/736x/e1/c2/4c/e1c24cf335a87ccbec1ca421f80f015d.jpg "
-//        ),
-//        FoodItemData(
-//            name = "Veggie Wrap",
-//            detail = "Fresh veggies and hummus wrap",
-//            originalPrice = "25000",
-//            discountedPrice = "",
-//            imageUrl = "https://i.pinimg.com/736x/e1/c2/4c/e1c24cf335a87ccbec1ca421f80f015d.jpg "
-//        ),
-//        FoodItemData(
-//            name = "Fries Large",
-//            detail = "Crispy golden fries",
-//            originalPrice = "15000",
-//            discountedPrice = "",
-//            imageUrl = "https://i.pinimg.com/736x/e1/c2/4c/e1c24cf335a87ccbec1ca421f80f015d.jpg "
-//        )
-//    )
-//
-//    LazyColumn(
-//        modifier = Modifier.fillMaxSize()
-//    ) {
-//        item(){
-//            Box(
-//                modifier = Modifier.fillMaxWidth(),
-//                contentAlignment = Alignment.CenterEnd
-//            ) {
-//                // Your other content here (like price text)
-//
-//                Button(
-//                    onClick = { /* Handle promo click */ },
-//                    shape = RoundedCornerShape(30.dp),
-//                ) {
-//                    Text(text = "Promo")
-//                }
-//            }
-//        }
-//        items(items.size) { index ->
-//            val item = items[index]
-//            FoodItemCard(
-//                foodName = item.name,
-//                foodDetail = item.detail,
-//                originalPrice = item.originalPrice,
-//                discountedPrice = item.discountedPrice,
-//                imageUrl = item.imageUrl,
-//                onFoodClick = { foodName ->
-//                    onFoodClick(foodName)
-//                }
-//            )
-//        }
-//    }
 }
+

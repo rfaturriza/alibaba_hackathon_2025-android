@@ -15,8 +15,12 @@ object FoodFetcher {
     private val _foodItems = MutableStateFlow<List<FoodItem>>(emptyList())
     val foodItems: StateFlow<List<FoodItem>> get() = _foodItems
 
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> get() = _isLoading
+
     fun fetchFoodItems(lifecycleScope: LifecycleCoroutineScope) {
         lifecycleScope.launch {
+            _isLoading.value = true
             try {
                 val items = withContext(Dispatchers.IO) {
                     RetrofitClient.api.getProducts()
@@ -27,7 +31,10 @@ object FoodFetcher {
             } catch (e: Exception) {
                 Log.d("fetchFoodItems", ": you are in this position 2 ${e.localizedMessage}")
                 e.printStackTrace()
+            } finally {
+                _isLoading.value = false
             }
         }
     }
 }
+

@@ -90,6 +90,7 @@ fun DetailFoodScreen(
     // Convert FoodItem to FoodDetail for your existing UI
     val foodDetail = remember(selectedItem) {
         FoodDetail(
+            foodItem = selectedItem,
             deliveryAddress = "Jalan Setiabudi Timur", // Replace with user-selected address later
             itemTitle = selectedItem.title,
             itemDescription = selectedItem.description,
@@ -114,10 +115,12 @@ fun DetailFoodScreen(
                         message = result.response.message
                         isSuccessDialogShowing = true
                     }
+
                     is OrderHelper.OrderResult.Alert -> {
                         message = result.response.message
                         isAlertDialogShowing = true
                     }
+
                     is OrderHelper.OrderResult.Error -> {
                         message = "Error: ${result.exception.message}"
                     }
@@ -316,6 +319,28 @@ fun FoodDetailItem(
                         Text(text = "Promo")
                     }
                 }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.LightGray.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                    .padding(12.dp)
+            ) {
+                // add chip for nutritional information
+                Text(
+                    text = "Nutritional Information",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = "Calories: ${foodDetail.foodItem.nutrition.calory}")
+                Text(text = "Protein: ${foodDetail.foodItem.nutrition.protein}")
+                Text(text = "Carbohydrates: ${foodDetail.foodItem.nutrition.carbohydrate}")
+                Text(text = "Fat: ${foodDetail.foodItem.nutrition.fat}")
+                Text(text = "Sugar: ${foodDetail.foodItem.nutrition.sugar}")
+                Text(text = "Fiber: ${foodDetail.foodItem.nutrition.fiber}")
+                Text(text = "Allergen Potential: ${foodDetail.foodItem.nutrition.allergen_potential}")
             }
 
             Spacer(modifier = Modifier.height(12.dp))
